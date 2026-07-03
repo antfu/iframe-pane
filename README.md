@@ -74,7 +74,7 @@ const panes = createIframePanes({
 // per-pane overrides, merged over the manager's
 panes.ensure('docs', {
   src: 'https://example.com/',
-  styleDefault: { colorScheme: 'dark' },
+  style: { colorScheme: 'dark' },
 })
 ```
 
@@ -123,7 +123,7 @@ const panes = createIframePanes({ maxPanes: 5 })
 
 Returns an `IframePanes` manager:
 
-- `ensure(id, options?)` — get-or-create a pane (`src`, `attrs`, `styleDefault`, `styleActive`, `styleHidden`, `onCreated`; creation-only)
+- `ensure(id, options?)` — get-or-create a pane (`src`, `attrs`, `style`, `styleActive`, `styleHidden`, `onCreated`; creation-only)
 - `get(id)` / `has(id)` / `list()`
 - `lockPointerEvents()` — returns a release function
 - `maxPanes` — read/write; lowering evicts immediately

@@ -176,7 +176,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
       this.id = id
       this.styleDefault = {
         ...options.styleDefault,
-        ...paneOptions.styleDefault,
+        ...paneOptions.style,
       }
       this.styleActive = {
         opacity: '1',

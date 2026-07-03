@@ -89,7 +89,7 @@ export interface IframePaneOptions {
    * Base inline styles applied to the iframe on creation.
    * Merged over {@link IframePanesOptions.styleDefault}.
    */
-  styleDefault?: IframePaneStyle
+  style?: IframePaneStyle
   /**
    * Inline styles applied when the pane is shown.
    * Merged over {@link IframePanesOptions.styleActive}.

@@ -20,7 +20,7 @@ export interface IframePane {
 export interface IframePaneOptions {
   src?: string;
   attrs?: Record<string, string>;
-  styleDefault?: IframePaneStyle;
+  style?: IframePaneStyle;
   styleActive?: IframePaneStyle;
   styleHidden?: IframePaneStyle;
   onCreated?: (_: HTMLIFrameElement) => void;

@@ -103,12 +103,12 @@ describe('createIframePanes', () => {
     expect(panes.list()).toEqual([a1])
   })
 
-  it('applies attrs, styleDefault, and onCreated', () => {
+  it('applies attrs, style, and onCreated', () => {
     const panes = createIframePanes()
     const onCreated = vi.fn()
     const pane = panes.ensure('a', {
       attrs: { allow: 'clipboard-read; clipboard-write', title: 'Test' },
-      styleDefault: { colorScheme: 'dark' },
+      style: { colorScheme: 'dark' },
       onCreated,
     })
     expect(pane.iframe.getAttribute('allow')).toBe('clipboard-read; clipboard-write')
@@ -248,12 +248,12 @@ describe('mount / unmount', () => {
 })
 
 describe('style customization', () => {
-  it('merges manager and pane styleDefault', () => {
+  it('merges manager styleDefault and pane style', () => {
     const panes = createIframePanes({
       styleDefault: { borderRadius: '8px', colorScheme: 'light' },
     })
     const pane = panes.ensure('a', {
-      styleDefault: { colorScheme: 'dark' },
+      style: { colorScheme: 'dark' },
     })
     expect(pane.iframe.style.borderRadius).toBe('8px')
     expect(pane.iframe.style.colorScheme).toBe('dark')
@@ -280,10 +280,10 @@ describe('style customization', () => {
     expect(pane.iframe.style.boxShadow).toBe('')
   })
 
-  it('resets state keys back to styleDefault values', () => {
+  it('resets state keys back to default style values', () => {
     const panes = createIframePanes()
     const pane = panes.ensure('a', {
-      styleDefault: { transform: 'scale(1)' },
+      style: { transform: 'scale(1)' },
       styleHidden: { transform: 'scale(0.98)' },
     })
     expect(pane.iframe.style.transform).toBe('scale(0.98)')
