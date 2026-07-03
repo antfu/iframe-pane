@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Page A</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: #fff;
+      background: #1a3a5c;
+    }
+    button, input {
+      font-size: 16px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.1);
+      color: inherit;
+    }
+  </style>
+</head>
+<body>
+  <h1>Page A</h1>
+  <button id="counter">count: 0</button>
+  <input placeholder="type here — state persists" />
+  <script>
+    let count = 0
+    const button = document.querySelector('#counter')
+    button.addEventListener('click', () => {
+      button.textContent = `count: ${++count}`
+    })
+  </script>
+</body>
+</html>
