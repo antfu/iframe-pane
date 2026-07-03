@@ -13,7 +13,13 @@
     "url": "git+https://github.com/antfu/iframe-pane.git"
   },
   "bugs": "https://github.com/antfu/iframe-pane/issues",
-  "keywords": [],
+  "keywords": [
+    "iframe",
+    "persistent",
+    "headless",
+    "devtools",
+    "pane"
+  ],
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs",
@@ -27,6 +33,7 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "lint": "eslint",
+    "play": "vite playground --host",
     "prepublishOnly": "nr build",
     "release": "bumpp",
     "start": "tsx src/index.ts",
@@ -41,6 +48,7 @@
     "@types/node": "catalog:types",
     "bumpp": "catalog:cli",
     "eslint": "catalog:cli",
+    "happy-dom": "catalog:testing",
     "nano-staged": "catalog:cli",
     "publint": "catalog:cli",
     "simple-git-hooks": "catalog:cli",

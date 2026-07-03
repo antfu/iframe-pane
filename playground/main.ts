@@ -1,0 +1,112 @@
+import { createIframePanes } from '../src'
+
+const panes = createIframePanes({
+  zIndex: 10,
+  onPaneCreated: pane => log(`created: ${pane.id}`),
+  onPaneDisposed: pane => log(`disposed: ${pane.id}`),
+})
+
+// Expose for quick console poking
+Object.assign(window, { panes })
+
+const stage = document.querySelector<HTMLDivElement>('#stage')!
+const statusEl = document.querySelector<HTMLPreElement>('#status')!
+const tabButtons = document.querySelector<HTMLSpanElement>('#tab-buttons')!
+const sidebar = document.querySelector<HTMLDivElement>('#sidebar')!
+const splitter = document.querySelector<HTMLDivElement>('#splitter')!
+
+const tabs = ['a', 'b', 'c'] as const
+let active: string | null = null
+const logs: string[] = []
+
+function log(message: string): void {
+  logs.unshift(message)
+  logs.length = Math.min(logs.length, 8)
+  renderStatus()
+}
+
+function renderStatus(): void {
+  const lines = panes.list().map(pane =>
+    `${pane.id}  mounted:${pane.isMounted}  visible:${pane.isVisible}  lru:${pane.lastActiveAt}`)
+  statusEl.textContent = [
+    `maxPanes: ${panes.maxPanes}`,
+    `pointerLocked: ${panes.isPointerLocked}`,
+    '',
+    ...lines,
+    '',
+    ...logs,
+  ].join('\n')
+}
+
+function activate(id: string): void {
+  active = id
+  for (const other of panes.list()) {
+    if (other.id !== id)
+      other.unmount()
+  }
+  panes.ensure(id, { src: `./pages/${id}.html`, attrs: { title: `Pane ${id}` } })
+    .mount(stage)
+  for (const button of tabButtons.querySelectorAll('button'))
+    button.classList.toggle('active', button.dataset.tab === active)
+  renderStatus()
+}
+
+for (const id of tabs) {
+  const button = document.createElement('button')
+  button.textContent = `Tab ${id.toUpperCase()}`
+  button.dataset.tab = id
+  button.addEventListener('click', () => activate(id))
+  tabButtons.appendChild(button)
+}
+
+document.querySelector('#btn-unmount')!.addEventListener('click', () => {
+  if (active)
+    panes.get(active)?.unmount()
+  renderStatus()
+})
+
+document.querySelector('#btn-hide')!.addEventListener('click', () => {
+  const pane = active ? panes.get(active) : undefined
+  if (!pane)
+    return
+  if (pane.isVisible)
+    pane.hide()
+  else
+    pane.show()
+  renderStatus()
+})
+
+document.querySelector('#btn-dispose')!.addEventListener('click', () => {
+  if (active)
+    panes.get(active)?.dispose()
+  renderStatus()
+})
+
+document.querySelector('#btn-lru')!.addEventListener('click', () => {
+  panes.maxPanes = panes.maxPanes === 2 ? Number.POSITIVE_INFINITY : 2
+  renderStatus()
+})
+
+// Splitter drag: lock pointer events on all panes so the iframe
+// doesn't swallow pointermove while resizing.
+splitter.addEventListener('pointerdown', (event) => {
+  event.preventDefault()
+  const release = panes.lockPointerEvents()
+  splitter.classList.add('dragging')
+  renderStatus()
+
+  const onMove = (move: PointerEvent): void => {
+    sidebar.style.width = `${move.clientX}px`
+  }
+  const onUp = (): void => {
+    release()
+    splitter.classList.remove('dragging')
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+    renderStatus()
+  }
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+})
+
+renderStatus()
