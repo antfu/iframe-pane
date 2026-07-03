@@ -1,4 +1,4 @@
-import type { IframePane, IframePaneOptions, IframePanes, IframePanesOptions } from './types'
+import type { IframePane, IframePaneOptions, IframePanes, IframePanesOptions, IframePaneStyle } from './types'
 
 /**
  * Create a manager for a set of persistent, headless iframes.
@@ -12,8 +12,6 @@ import type { IframePane, IframePaneOptions, IframePanes, IframePanesOptions } f
  * pane is created.
  */
 export function createIframePanes(options: IframePanesOptions = {}): IframePanes {
-  const hiddenOpacity = String(options.hiddenOpacity ?? 0.001)
-
   const panes = new Map<string, Pane>()
   /** Panes grouped by the target element they are mounted to */
   const targetPanes = new Map<Element, Set<Pane>>()
@@ -139,7 +137,9 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
   }
 
   function applyPointerEvents(pane: Pane): void {
-    pane.iframe.style.pointerEvents = (!pane.isVisible || pointerLocks > 0) ? 'none' : 'auto'
+    pane.iframe.style.pointerEvents = pointerLocks > 0
+      ? 'none'
+      : pane.stateStyle.pointerEvents
   }
 
   /**
@@ -162,6 +162,11 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
   class Pane implements IframePane {
     readonly id: string
     readonly iframe: HTMLIFrameElement
+    readonly styleDefault: IframePaneStyle
+    readonly styleActive: IframePaneStyle & { pointerEvents: string }
+    readonly styleHidden: IframePaneStyle & { pointerEvents: string }
+    /** Union of style keys managed by the two states */
+    readonly stateKeys: string[]
     target: Element | null = null
     isVisible = false
     isDisposed = false
@@ -169,6 +174,27 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
 
     constructor(id: string, paneOptions: IframePaneOptions) {
       this.id = id
+      this.styleDefault = {
+        ...options.styleDefault,
+        ...paneOptions.styleDefault,
+      }
+      this.styleActive = {
+        opacity: '1',
+        pointerEvents: 'auto',
+        ...options.styleActive,
+        ...paneOptions.styleActive,
+      }
+      this.styleHidden = {
+        opacity: '0.001',
+        pointerEvents: 'none',
+        ...options.styleHidden,
+        ...paneOptions.styleHidden,
+      }
+      this.stateKeys = [...new Set([
+        ...Object.keys(this.styleActive),
+        ...Object.keys(this.styleHidden),
+      ])]
+
       const doc = getDocument()
       const iframe = this.iframe = doc.createElement('iframe')
       iframe.setAttribute('data-iframe-pane', id)
@@ -178,15 +204,12 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
         left: '0px',
         top: '0px',
         border: '0',
-        opacity: hiddenOpacity,
-        pointerEvents: 'none',
-      } satisfies Partial<CSSStyleDeclaration>)
+      } satisfies Partial<CSSStyleDeclaration>, this.styleDefault)
       if (paneOptions.attrs) {
         for (const [key, value] of Object.entries(paneOptions.attrs))
           iframe.setAttribute(key, value)
       }
-      if (paneOptions.style)
-        Object.assign(iframe.style, paneOptions.style)
+      this.applyState()
       paneOptions.onCreated?.(iframe)
       if (paneOptions.src)
         iframe.src = paneOptions.src
@@ -195,6 +218,28 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
 
     get isMounted(): boolean {
       return this.target != null
+    }
+
+    /** Merged styles of the current visibility state */
+    get stateStyle(): IframePaneStyle & { pointerEvents: string } {
+      return this.isVisible ? this.styleActive : this.styleHidden
+    }
+
+    /**
+     * Apply the styles of the current state; keys owned by the opposite
+     * state fall back to `styleDefault` (or are removed). A pointer-events
+     * lock always wins.
+     */
+    applyState(): void {
+      const state = this.stateStyle
+      const styles: IframePaneStyle = {}
+      for (const key of this.stateKeys) {
+        if (!(key in state))
+          styles[key] = this.styleDefault[key] ?? ''
+      }
+      Object.assign(this.iframe.style, styles, state)
+      if (pointerLocks > 0)
+        this.iframe.style.pointerEvents = 'none'
     }
 
     touch(): void {
@@ -224,8 +269,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
       this.assertNotDisposed()
       this.touch()
       this.isVisible = true
-      this.iframe.style.opacity = '1'
-      applyPointerEvents(this)
+      this.applyState()
       this.update()
     }
 
@@ -233,8 +277,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
       if (this.isDisposed)
         return
       this.isVisible = false
-      this.iframe.style.opacity = hiddenOpacity
-      applyPointerEvents(this)
+      this.applyState()
     }
 
     update(): void {

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { IframePane } from '../src'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createIframePanes } from '../src'
 
 class ResizeObserverStub {
@@ -55,6 +55,18 @@ function createTarget(rect: Partial<DOMRect> = { left: 10, top: 20, width: 300, 
   return el
 }
 
+beforeAll(() => {
+  // happy-dom reports the (intentionally) disabled iframe page loading as a
+  // console error on the original stderr, bypassing vitest's console
+  // interception — swallow just that noise
+  const originalWrite = process.stderr.write.bind(process.stderr)
+  vi.spyOn(process.stderr, 'write').mockImplementation((chunk, ...args) => {
+    if (String(chunk).includes('Iframe page loading is disabled'))
+      return true
+    return originalWrite(chunk, ...args as [])
+  })
+})
+
 beforeEach(() => {
   document.body.innerHTML = ''
   ResizeObserverStub.instances = []
@@ -91,12 +103,12 @@ describe('createIframePanes', () => {
     expect(panes.list()).toEqual([a1])
   })
 
-  it('applies attrs, style, and onCreated', () => {
+  it('applies attrs, styleDefault, and onCreated', () => {
     const panes = createIframePanes()
     const onCreated = vi.fn()
     const pane = panes.ensure('a', {
       attrs: { allow: 'clipboard-read; clipboard-write', title: 'Test' },
-      style: { colorScheme: 'dark' },
+      styleDefault: { colorScheme: 'dark' },
       onCreated,
     })
     expect(pane.iframe.getAttribute('allow')).toBe('clipboard-read; clipboard-write')
@@ -232,6 +244,79 @@ describe('mount / unmount', () => {
     expect(ro.observed).toEqual([target])
     b.unmount()
     expect(ro.observed).toEqual([])
+  })
+})
+
+describe('style customization', () => {
+  it('merges manager and pane styleDefault', () => {
+    const panes = createIframePanes({
+      styleDefault: { borderRadius: '8px', colorScheme: 'light' },
+    })
+    const pane = panes.ensure('a', {
+      styleDefault: { colorScheme: 'dark' },
+    })
+    expect(pane.iframe.style.borderRadius).toBe('8px')
+    expect(pane.iframe.style.colorScheme).toBe('dark')
+  })
+
+  it('applies styleHidden and styleActive on state transitions', () => {
+    const panes = createIframePanes({
+      styleHidden: { visibility: 'hidden' },
+      styleActive: { boxShadow: '0 0 8px black' },
+    })
+    const pane = panes.ensure('a')
+    // hidden initially
+    expect(pane.iframe.style.opacity).toBe('0.001')
+    expect(pane.iframe.style.visibility).toBe('hidden')
+    expect(pane.iframe.style.boxShadow).toBe('')
+
+    pane.mount(createTarget())
+    expect(pane.iframe.style.opacity).toBe('1')
+    expect(pane.iframe.style.visibility).toBe('')
+    expect(pane.iframe.style.boxShadow).toBe('0 0 8px black')
+
+    pane.hide()
+    expect(pane.iframe.style.visibility).toBe('hidden')
+    expect(pane.iframe.style.boxShadow).toBe('')
+  })
+
+  it('resets state keys back to styleDefault values', () => {
+    const panes = createIframePanes()
+    const pane = panes.ensure('a', {
+      styleDefault: { transform: 'scale(1)' },
+      styleHidden: { transform: 'scale(0.98)' },
+    })
+    expect(pane.iframe.style.transform).toBe('scale(0.98)')
+
+    pane.mount(createTarget())
+    expect(pane.iframe.style.transform).toBe('scale(1)')
+
+    pane.hide()
+    expect(pane.iframe.style.transform).toBe('scale(0.98)')
+  })
+
+  it('overrides built-in hidden styles via styleHidden', () => {
+    const panes = createIframePanes({
+      styleHidden: { opacity: '0.5' },
+    })
+    const pane = panes.ensure('a', {
+      styleHidden: { opacity: '0.25' },
+    })
+    expect(pane.iframe.style.opacity).toBe('0.25')
+  })
+
+  it('respects a custom styleActive pointerEvents, except while locked', () => {
+    const panes = createIframePanes()
+    const pane = panes.ensure('a', {
+      styleActive: { pointerEvents: 'painted' },
+    })
+    pane.mount(createTarget())
+    expect(pane.iframe.style.pointerEvents).toBe('painted')
+
+    const release = panes.lockPointerEvents()
+    expect(pane.iframe.style.pointerEvents).toBe('none')
+    release()
+    expect(pane.iframe.style.pointerEvents).toBe('painted')
   })
 })
 

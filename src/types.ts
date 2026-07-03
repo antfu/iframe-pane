@@ -1,3 +1,8 @@
+/**
+ * Inline styles as camelCase CSS properties, e.g. `{ borderRadius: '8px' }`.
+ */
+export type IframePaneStyle = Record<string, string>
+
 export interface IframePanesOptions {
   /**
    * The document to create elements in.
@@ -26,15 +31,32 @@ export interface IframePanesOptions {
    */
   maxPanes?: number
   /**
-   * Opacity applied to hidden panes.
-   *
-   * A near-zero value (instead of `display: none` or `visibility: hidden`)
-   * keeps the iframe rendered and "warm", avoiding browser throttling and
-   * in-page layout resets while it is invisible.
-   *
-   * @default 0.001
+   * Base inline styles applied to every iframe on creation.
+   * Merged over the built-in base styles, and overridable per pane via
+   * {@link IframePaneOptions.styleDefault}.
    */
-  hiddenOpacity?: number | string
+  styleDefault?: IframePaneStyle
+  /**
+   * Inline styles applied to every iframe when it is shown.
+   * Merged over the built-in active styles (`opacity: 1;
+   * pointer-events: auto`), and overridable per pane via
+   * {@link IframePaneOptions.styleActive}.
+   *
+   * Style keys used by the opposite state are reset to their
+   * {@link IframePanesOptions.styleDefault} value (or removed) on transition.
+   */
+  styleActive?: IframePaneStyle
+  /**
+   * Inline styles applied to every iframe when it is hidden.
+   * Merged over the built-in hidden styles (`opacity: 0.001;
+   * pointer-events: none`), and overridable per pane via
+   * {@link IframePaneOptions.styleHidden}.
+   *
+   * The near-zero default opacity (instead of `display: none` or
+   * `visibility: hidden`) keeps the iframe rendered and "warm", avoiding
+   * browser throttling and in-page layout resets while it is invisible.
+   */
+  styleHidden?: IframePaneStyle
   /**
    * `z-index` for the default container. Ignored when a custom `container`
    * is provided.
@@ -64,9 +86,20 @@ export interface IframePaneOptions {
    */
   attrs?: Record<string, string>
   /**
-   * Extra inline styles to apply on the iframe element.
+   * Base inline styles applied to the iframe on creation.
+   * Merged over {@link IframePanesOptions.styleDefault}.
    */
-  style?: Record<string, string>
+  styleDefault?: IframePaneStyle
+  /**
+   * Inline styles applied when the pane is shown.
+   * Merged over {@link IframePanesOptions.styleActive}.
+   */
+  styleActive?: IframePaneStyle
+  /**
+   * Inline styles applied when the pane is hidden.
+   * Merged over {@link IframePanesOptions.styleHidden}.
+   */
+  styleHidden?: IframePaneStyle
   /**
    * Called right after the iframe element is created,
    * before it is appended to the container.

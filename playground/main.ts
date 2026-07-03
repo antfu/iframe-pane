@@ -2,6 +2,10 @@ import { createIframePanes } from '../src'
 
 const panes = createIframePanes({
   zIndex: 10,
+  styleDefault: {
+    borderRadius: '8px',
+    transition: 'opacity 150ms ease',
+  },
   onPaneCreated: pane => log(`created: ${pane.id}`),
   onPaneDisposed: pane => log(`disposed: ${pane.id}`),
 })

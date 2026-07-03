@@ -20,7 +20,9 @@ export interface IframePane {
 export interface IframePaneOptions {
   src?: string;
   attrs?: Record<string, string>;
-  style?: Record<string, string>;
+  styleDefault?: IframePaneStyle;
+  styleActive?: IframePaneStyle;
+  styleHidden?: IframePaneStyle;
   onCreated?: (_: HTMLIFrameElement) => void;
 }
 export interface IframePanes {
@@ -40,11 +42,17 @@ export interface IframePanesOptions {
   document?: Document;
   container?: HTMLElement;
   maxPanes?: number;
-  hiddenOpacity?: number | string;
+  styleDefault?: IframePaneStyle;
+  styleActive?: IframePaneStyle;
+  styleHidden?: IframePaneStyle;
   zIndex?: number | string;
   onPaneCreated?: (_: IframePane) => void;
   onPaneDisposed?: (_: IframePane) => void;
 }
+// #endregion
+
+// #region Types
+export type IframePaneStyle = Record<string, string>;
 // #endregion
 
 // #region Functions

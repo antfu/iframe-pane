@@ -57,6 +57,29 @@ pane.unmount()
 pane.mount(anotherElement)
 ```
 
+### Styling
+
+The library is headless — iframes only carry minimal built-in styles. Customize them per state, at the manager level and/or per pane (camelCase CSS properties):
+
+```ts
+const panes = createIframePanes({
+  // applied to every iframe on creation
+  styleDefault: { borderRadius: '8px', transition: 'opacity 150ms ease' },
+  // applied when a pane is shown (over the built-in `opacity: 1; pointer-events: auto`)
+  styleActive: { boxShadow: '0 2px 12px rgba(0, 0, 0, 0.2)' },
+  // applied when a pane is hidden (over the built-in `opacity: 0.001; pointer-events: none`)
+  styleHidden: { visibility: 'hidden' },
+})
+
+// per-pane overrides, merged over the manager's
+panes.ensure('docs', {
+  src: 'https://example.com/',
+  styleDefault: { colorScheme: 'dark' },
+})
+```
+
+Precedence: built-ins → manager options → pane options. On a state transition, style keys owned by the opposite state are reset to their `styleDefault` value (or removed), so the two states can use disjoint properties safely.
+
 ### Pointer events during drag / resize
 
 Iframes capture pointer events, which breaks drag interactions happening above them (panel resizing, window dragging, …). Lock them while the interaction runs:
@@ -91,14 +114,16 @@ const panes = createIframePanes({ maxPanes: 5 })
 | --- | --- | --- |
 | `container` | fixed full-viewport `<div>` in `<body>` | Positioned element hosting the parked iframes |
 | `maxPanes` | `Infinity` | LRU auto-dispose limit |
-| `hiddenOpacity` | `0.001` | Opacity applied to hidden panes |
+| `styleDefault` | — | Base inline styles applied to every iframe on creation |
+| `styleActive` | `{ opacity: '1', pointerEvents: 'auto' }` | Inline styles applied when a pane is shown |
+| `styleHidden` | `{ opacity: '0.001', pointerEvents: 'none' }` | Inline styles applied when a pane is hidden |
 | `zIndex` | unset | `z-index` of the default container |
 | `document` | `globalThis.document` | Document to operate on |
 | `onPaneCreated` / `onPaneDisposed` | — | Lifecycle callbacks |
 
 Returns an `IframePanes` manager:
 
-- `ensure(id, options?)` — get-or-create a pane (`src`, `attrs`, `style`, `onCreated`; creation-only)
+- `ensure(id, options?)` — get-or-create a pane (`src`, `attrs`, `styleDefault`, `styleActive`, `styleHidden`, `onCreated`; creation-only)
 - `get(id)` / `has(id)` / `list()`
 - `lockPointerEvents()` — returns a release function
 - `maxPanes` — read/write; lowering evicts immediately
