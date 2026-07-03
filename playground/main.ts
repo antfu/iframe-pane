@@ -48,16 +48,33 @@ function activate(id: string): void {
     if (other.id !== id)
       other.unmount()
   }
-  panes.ensure(id, { src: `./pages/${id}.html`, attrs: { title: `Pane ${id}` } })
-    .mount(stage)
+  if (id === 'div') {
+    // A non-iframe pane: managed the same way, but the pane element is a
+    // <div> we render into ourselves (e.g. a "custom-render" dock).
+    panes.ensure(id, {
+      tagName: 'div',
+      style: { background: '#144d34', color: '#dfe', padding: '16px', overflow: 'auto' },
+      onCreated: (el) => {
+        el.innerHTML = '<h2>Custom &lt;div&gt; pane</h2><p>This pane is a plain <code>&lt;div&gt;</code>, not an iframe — managed by the same manager. Switch tabs and back: it persists.</p><button id="div-count">clicks: 0</button>'
+        let clicks = 0
+        el.querySelector('#div-count')!.addEventListener('click', (event) => {
+          (event.currentTarget as HTMLButtonElement).textContent = `clicks: ${++clicks}`
+        })
+      },
+    }).mount(stage)
+  }
+  else {
+    panes.ensure(id, { src: `./pages/${id}.html`, attrs: { title: `Pane ${id}` } })
+      .mount(stage)
+  }
   for (const button of tabButtons.querySelectorAll('button'))
     button.classList.toggle('active', button.dataset.tab === active)
   renderStatus()
 }
 
-for (const id of tabs) {
+for (const id of [...tabs, 'div']) {
   const button = document.createElement('button')
-  button.textContent = `Tab ${id.toUpperCase()}`
+  button.textContent = id === 'div' ? 'Div pane' : `Tab ${id.toUpperCase()}`
   button.dataset.tab = id
   button.addEventListener('click', () => activate(id))
   tabButtons.appendChild(button)

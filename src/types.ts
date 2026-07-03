@@ -76,12 +76,32 @@ export interface IframePanesOptions {
 
 export interface IframePaneOptions {
   /**
+   * Tag name to create for the pane element.
+   *
+   * Panes are iframe-first, but any element can be managed — e.g. `'div'`
+   * for a custom-render dock. Ignored when {@link IframePaneOptions.element}
+   * is provided.
+   *
+   * @default 'iframe'
+   */
+  tagName?: string
+  /**
+   * Adopt an existing element as the pane element instead of creating one.
+   *
+   * When provided it takes precedence over {@link IframePaneOptions.tagName}.
+   * The element is appended into the manager's container and has the base
+   * styles and initial state applied, matching a created element.
+   */
+  element?: HTMLElement
+  /**
    * Initial `src` of the iframe. Only assigned on creation — re-`ensure()`ing
    * an existing pane never navigates it, so its state is preserved.
+   *
+   * Ignored for non-iframe panes (e.g. a `tagName: 'div'` pane).
    */
   src?: string
   /**
-   * Extra attributes to set on the iframe element,
+   * Extra attributes to set on the pane element,
    * e.g. `allow`, `sandbox`, `title`.
    */
   attrs?: Record<string, string>
@@ -101,10 +121,10 @@ export interface IframePaneOptions {
    */
   styleHidden?: IframePaneStyle
   /**
-   * Called right after the iframe element is created,
+   * Called right after the pane element is created,
    * before it is appended to the container.
    */
-  onCreated?: (iframe: HTMLIFrameElement) => void
+  onCreated?: (element: HTMLElement) => void
 }
 
 export interface IframePane {
@@ -113,7 +133,16 @@ export interface IframePane {
    */
   readonly id: string
   /**
-   * The managed iframe element.
+   * The managed element (an iframe by default; any element when a custom
+   * `tagName` or `element` was provided).
+   */
+  readonly element: HTMLElement
+  /**
+   * The managed element, typed as an iframe.
+   *
+   * Back-compat alias for {@link IframePane.element} — panes are iframe-first,
+   * so this returns the same element cast to `HTMLIFrameElement`. Prefer
+   * {@link IframePane.element} for non-iframe panes.
    */
   readonly iframe: HTMLIFrameElement
   /**

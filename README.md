@@ -106,6 +106,26 @@ for (const pane of panes.list())
 const panes = createIframePanes({ maxPanes: 5 })
 ```
 
+### Managing non-iframe elements
+
+`iframe-pane` is iframe-first, but the pane machinery (box syncing, warm hiding, pointer-events locking, LRU eviction) is element-agnostic. Pass a `tagName` to manage any element the same way — for example a `<div>` for a custom-render dock that also needs to persist out of the render tree:
+
+```ts
+// create a <div> pane instead of an <iframe>
+const dock = panes.ensure('custom', { tagName: 'div' })
+dock.element.append(myRenderedNode) // pane.element is the managed <div>
+dock.mount(document.querySelector('#stage')!)
+```
+
+Or adopt an existing element with `element` (it takes precedence over `tagName`); it's appended into the container and gets the same base styles and state:
+
+```ts
+const node = document.createElement('div')
+panes.ensure('custom', { element: node })
+```
+
+`pane.element` is the canonical accessor for any pane; `pane.iframe` remains as a back-compat alias (the same element, typed as `HTMLIFrameElement`). `src` is only applied to iframe panes and is ignored otherwise.
+
 ## API
 
 ### `createIframePanes(options?)`
@@ -123,7 +143,7 @@ const panes = createIframePanes({ maxPanes: 5 })
 
 Returns an `IframePanes` manager:
 
-- `ensure(id, options?)` — get-or-create a pane (`src`, `attrs`, `style`, `styleActive`, `styleHidden`, `onCreated`; creation-only)
+- `ensure(id, options?)` — get-or-create a pane (`src`, `attrs`, `tagName`, `element`, `style`, `styleActive`, `styleHidden`, `onCreated`; creation-only)
 - `get(id)` / `has(id)` / `list()`
 - `lockPointerEvents()` — returns a release function
 - `maxPanes` — read/write; lowering evicts immediately
@@ -136,8 +156,10 @@ Returns an `IframePanes` manager:
 - `unmount()` — detach and hide (iframe kept alive)
 - `show()` / `hide()` — toggle visibility without detaching
 - `update()` — manually re-sync the box
-- `dispose()` — remove the iframe and unregister it
-- `iframe`, `target`, `isMounted`, `isVisible`, `isDisposed`, `lastActiveAt`
+- `dispose()` — remove the element and unregister it
+- `element` — the managed element (an `<iframe>` by default)
+- `iframe` — back-compat alias for `element`, typed as `HTMLIFrameElement`
+- `target`, `isMounted`, `isVisible`, `isDisposed`, `lastActiveAt`
 
 ## Framework integrations
 

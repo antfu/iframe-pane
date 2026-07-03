@@ -86,6 +86,9 @@ describe('createIframePanes', () => {
     expect(container.style.pointerEvents).toBe('none')
 
     expect(pane.iframe.parentElement).toBe(container)
+    // `iframe` and `element` are the same node; default tag is <iframe>
+    expect(pane.element).toBe(pane.iframe)
+    expect(pane.element.tagName).toBe('IFRAME')
     expect(pane.iframe.getAttribute('data-iframe-pane')).toBe('a')
     expect(pane.iframe.src).toBe('https://example.com/')
     // hidden by default
@@ -550,5 +553,113 @@ describe('viewport listeners', () => {
     expect(a.iframe.style.height).toBe('4px')
     expect(b.iframe.style.left).toBe('5px')
     expect(b.iframe.style.height).toBe('8px')
+  })
+})
+
+describe('non-iframe elements', () => {
+  it('creates a custom tagName element and exposes it as `element`', () => {
+    const panes = createIframePanes()
+    const onCreated = vi.fn()
+    const pane = panes.ensure('a', {
+      tagName: 'div',
+      attrs: { role: 'region', title: 'Custom' },
+      onCreated,
+    })
+
+    expect(pane.element.tagName).toBe('DIV')
+    // `iframe` back-compat alias points at the same node (cast)
+    expect(pane.iframe).toBe(pane.element)
+    expect(pane.element.parentElement).toBe(panes.container)
+    expect(pane.element.getAttribute('data-iframe-pane')).toBe('a')
+    expect(pane.element.getAttribute('role')).toBe('region')
+    expect(pane.element.getAttribute('title')).toBe('Custom')
+    expect(onCreated).toHaveBeenCalledWith(pane.element)
+    // base styles + hidden state applied
+    expect(pane.element.style.position).toBe('absolute')
+    expect(pane.element.style.opacity).toBe('0.001')
+    expect(pane.element.style.pointerEvents).toBe('none')
+  })
+
+  it('mount/unmount/show/hide/update + box-sync work on a div pane', () => {
+    const panes = createIframePanes()
+    const pane = panes.ensure('a', { tagName: 'div' })
+    const target = createTarget({ left: 10, top: 20, width: 300, height: 200 })
+
+    pane.mount(target)
+    expect(pane.isMounted).toBe(true)
+    expect(pane.isVisible).toBe(true)
+    expect(pane.element.style.opacity).toBe('1')
+    expect(pane.element.style.pointerEvents).toBe('auto')
+    expect(pane.element.style.left).toBe('10px')
+    expect(pane.element.style.top).toBe('20px')
+    expect(pane.element.style.width).toBe('300px')
+    expect(pane.element.style.height).toBe('200px')
+
+    // box-sync on resize
+    mockRect(target, { left: 0, top: 0, width: 640, height: 480 })
+    ResizeObserverStub.instances[0].trigger([target])
+    expect(pane.element.style.width).toBe('640px')
+    expect(pane.element.style.height).toBe('480px')
+
+    pane.hide()
+    expect(pane.isVisible).toBe(false)
+    expect(pane.element.style.opacity).toBe('0.001')
+
+    pane.show()
+    expect(pane.element.style.opacity).toBe('1')
+
+    pane.unmount()
+    expect(pane.isMounted).toBe(false)
+    expect(pane.element.style.opacity).toBe('0.001')
+    expect(pane.element.parentElement).toBe(panes.container)
+  })
+
+  it('applies the pointer-events lock to a div pane', () => {
+    const panes = createIframePanes()
+    const pane = panes.ensure('a', { tagName: 'div' })
+    pane.mount(createTarget())
+    expect(pane.element.style.pointerEvents).toBe('auto')
+
+    const release = panes.lockPointerEvents()
+    expect(pane.element.style.pointerEvents).toBe('none')
+    release()
+    expect(pane.element.style.pointerEvents).toBe('auto')
+  })
+
+  it('adopts an existing element via `element`, taking precedence over tagName', () => {
+    const panes = createIframePanes()
+    const myDiv = document.createElement('div')
+    myDiv.textContent = 'adopted'
+
+    const pane = panes.ensure('a', { element: myDiv, tagName: 'span' })
+    expect(pane.element).toBe(myDiv)
+    expect(pane.element.tagName).toBe('DIV')
+    expect(pane.element.textContent).toBe('adopted')
+    // appended into the container with base styles + hidden state applied
+    expect(myDiv.parentElement).toBe(panes.container)
+    expect(myDiv.style.position).toBe('absolute')
+    expect(myDiv.style.opacity).toBe('0.001')
+    expect(myDiv.getAttribute('data-iframe-pane')).toBe('a')
+
+    pane.mount(createTarget({ left: 10, top: 20, width: 300, height: 200 }))
+    expect(myDiv.style.left).toBe('10px')
+    expect(myDiv.style.width).toBe('300px')
+  })
+
+  it('ignores `src` for non-iframe panes without throwing', () => {
+    const panes = createIframePanes()
+    expect(() =>
+      panes.ensure('a', { tagName: 'div', src: 'https://example.com/' }),
+    ).not.toThrow()
+    const pane = panes.get('a')!
+    expect(pane.element.tagName).toBe('DIV')
+    expect(pane.element.hasAttribute('src')).toBe(false)
+    expect((pane.element as unknown as { src?: string }).src).toBeUndefined()
+  })
+
+  it('still applies `src` for iframe panes', () => {
+    const panes = createIframePanes()
+    const pane = panes.ensure('a', { tagName: 'iframe', src: 'https://example.com/' })
+    expect(pane.iframe.src).toBe('https://example.com/')
   })
 })

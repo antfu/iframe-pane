@@ -4,6 +4,7 @@
 // #region Interfaces
 export interface IframePane {
   readonly id: string;
+  readonly element: HTMLElement;
   readonly iframe: HTMLIFrameElement;
   readonly target: Element | null;
   readonly isMounted: boolean;
@@ -18,12 +19,14 @@ export interface IframePane {
   dispose: () => void;
 }
 export interface IframePaneOptions {
+  tagName?: string;
+  element?: HTMLElement;
   src?: string;
   attrs?: Record<string, string>;
   style?: IframePaneStyle;
   styleActive?: IframePaneStyle;
   styleHidden?: IframePaneStyle;
-  onCreated?: (_: HTMLIFrameElement) => void;
+  onCreated?: (_: HTMLElement) => void;
 }
 export interface IframePanes {
   list: () => IframePane[];
