@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { IframePane } from '../src'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { createIframePanes } from '../src'
 
 class ResizeObserverStub {
@@ -90,7 +90,7 @@ describe('createIframePanes', () => {
     expect(pane.element).toBe(pane.iframe)
     expect(pane.element.tagName).toBe('IFRAME')
     expect(pane.element.getAttribute('data-iframe-pane')).toBe('a')
-    expect(pane.iframe!.src).toBe('https://example.com/')
+    expect(pane.iframe.src).toBe('https://example.com/')
     // hidden by default
     expect(pane.isVisible).toBe(false)
     expect(pane.element.style.opacity).toBe('0.001')
@@ -102,7 +102,7 @@ describe('createIframePanes', () => {
     const a1 = panes.ensure('a', { src: 'https://example.com/one' })
     const a2 = panes.ensure('a', { src: 'https://example.com/two' })
     expect(a2).toBe(a1)
-    expect(a1.iframe!.src).toBe('https://example.com/one')
+    expect(a1.iframe.src).toBe('https://example.com/one')
     expect(panes.list()).toEqual([a1])
   })
 
@@ -438,8 +438,8 @@ describe('lru auto-dispose', () => {
 
 describe('dispose', () => {
   it('disposes a pane: removes iframe and unregisters', () => {
-    const created: IframePane[] = []
-    const disposed: IframePane[] = []
+    const created: IframePane<HTMLElement>[] = []
+    const disposed: IframePane<HTMLElement>[] = []
     const panes = createIframePanes({
       onPaneCreated: pane => created.push(pane),
       onPaneDisposed: pane => disposed.push(pane),
@@ -660,6 +660,40 @@ describe('non-iframe elements', () => {
   it('still applies `src` for iframe panes', () => {
     const panes = createIframePanes()
     const pane = panes.ensure('a', { tagName: 'iframe', src: 'https://example.com/' })
-    expect(pane.iframe!.src).toBe('https://example.com/')
+    expect(pane.iframe.src).toBe('https://example.com/')
+  })
+})
+
+describe('element type inference', () => {
+  it('infers the element type from the options so `iframe` is conditionally nullable', () => {
+    const panes = createIframePanes()
+
+    // default → iframe pane; `iframe` is non-nullable
+    const def = panes.ensure('a')
+    expectTypeOf(def.element).toEqualTypeOf<HTMLIFrameElement>()
+    expectTypeOf(def.iframe).toEqualTypeOf<HTMLIFrameElement>()
+
+    // options without tagName/element still resolve to an iframe pane
+    const withSrc = panes.ensure('b', { src: 'https://example.com/' })
+    expectTypeOf(withSrc.iframe).toEqualTypeOf<HTMLIFrameElement>()
+
+    // tagName: 'iframe' → iframe pane, non-nullable
+    const iframe = panes.ensure('c', { tagName: 'iframe' })
+    expectTypeOf(iframe.iframe).toEqualTypeOf<HTMLIFrameElement>()
+
+    // tagName: 'div' → div pane; element is HTMLDivElement, `iframe` is undefined
+    const div = panes.ensure('d', { tagName: 'div' })
+    expectTypeOf(div.element).toEqualTypeOf<HTMLDivElement>()
+    expectTypeOf(div.iframe).toBeUndefined()
+
+    // adopted element → element type follows the provided node
+    const adopted = panes.ensure('e', { element: document.createElement('section') })
+    expectTypeOf(adopted.element).toEqualTypeOf<HTMLElement>()
+
+    // unknown element type (get/list) → `iframe` is HTMLIFrameElement | undefined
+    const got = panes.get('a')
+    expectTypeOf(got).toEqualTypeOf<IframePane<HTMLElement> | undefined>()
+    expectTypeOf(got!.iframe).toEqualTypeOf<HTMLIFrameElement | undefined>()
+    expectTypeOf(panes.list()).toEqualTypeOf<IframePane<HTMLElement>[]>()
   })
 })

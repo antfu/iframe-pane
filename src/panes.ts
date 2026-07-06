@@ -177,7 +177,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
     }
   }
 
-  class Pane implements IframePane {
+  class Pane implements IframePane<HTMLElement> {
     readonly id: string
     readonly element: HTMLElement
     readonly styleDefault: IframePaneStyle
@@ -190,7 +190,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
     isDisposed = false
     lastActiveAt = 0
 
-    constructor(id: string, paneOptions: IframePaneOptions) {
+    constructor(id: string, paneOptions: IframePaneOptions<HTMLElement>) {
       this.id = id
       this.styleDefault = {
         ...options.styleDefault,
@@ -347,7 +347,9 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
     has(id) {
       return panes.has(id)
     },
-    ensure(id, paneOptions = {}) {
+    // Overloaded in the `IframePanes` type to infer the element type from
+    // `tagName`/`element`; the runtime is element-agnostic, so cast the impl.
+    ensure: ((id: string, paneOptions: IframePaneOptions<HTMLElement> = {}) => {
       if (isDisposed)
         throw new Error('[iframe-pane] Manager has been disposed')
       let pane = panes.get(id)
@@ -362,7 +364,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
         pane.touch()
       }
       return pane
-    },
+    }) as unknown as IframePanes['ensure'],
     get maxPanes() {
       return maxPanes
     },

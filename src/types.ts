@@ -67,14 +67,26 @@ export interface IframePanesOptions {
   /**
    * Called after a pane is created.
    */
-  onPaneCreated?: (pane: IframePane) => void
+  onPaneCreated?: (pane: IframePane<HTMLElement>) => void
   /**
    * Called after a pane is disposed (manually or by LRU eviction).
    */
-  onPaneDisposed?: (pane: IframePane) => void
+  onPaneDisposed?: (pane: IframePane<HTMLElement>) => void
 }
 
-export interface IframePaneOptions {
+/**
+ * Resolves the type of {@link IframePane.iframe} for a managed element `E`:
+ * - a known iframe element → `HTMLIFrameElement` (non-nullable)
+ * - a known non-iframe element → `undefined`
+ * - an unknown element (e.g. the base `HTMLElement`) → `HTMLIFrameElement | undefined`
+ */
+export type PaneIframe<E extends HTMLElement> = [E] extends [HTMLIFrameElement]
+  ? HTMLIFrameElement
+  : [HTMLElement] extends [E]
+      ? HTMLIFrameElement | undefined
+      : undefined
+
+export interface IframePaneOptions<E extends HTMLElement = HTMLIFrameElement> {
   /**
    * Tag name to create for the pane element.
    *
@@ -92,7 +104,7 @@ export interface IframePaneOptions {
    * The element is appended into the manager's container and has the base
    * styles and initial state applied, matching a created element.
    */
-  element?: HTMLElement
+  element?: E
   /**
    * Initial `src` of the iframe. Only assigned on creation — re-`ensure()`ing
    * an existing pane never navigates it, so its state is preserved.
@@ -124,10 +136,10 @@ export interface IframePaneOptions {
    * Called right after the pane element is created,
    * before it is appended to the container.
    */
-  onCreated?: (element: HTMLElement) => void
+  onCreated?: (element: E) => void
 }
 
-export interface IframePane {
+export interface IframePane<E extends HTMLElement = HTMLIFrameElement> {
   /**
    * Unique id of the pane within its manager.
    */
@@ -136,16 +148,18 @@ export interface IframePane {
    * The managed element (an iframe by default; any element when a custom
    * `tagName` or `element` was provided).
    */
-  readonly element: HTMLElement
+  readonly element: E
   /**
    * The managed element when it is an iframe; `undefined` otherwise.
    *
    * Back-compat alias for {@link IframePane.element} — panes are iframe-first,
-   * so for the default (iframe) pane this is the same element. It is
-   * `undefined` for non-iframe panes (e.g. a `tagName: 'div'` pane); use
+   * so for a statically-known iframe pane this is the same element, typed
+   * non-nullable. It is `undefined` for a known non-iframe pane (e.g. a
+   * `tagName: 'div'` pane), and `HTMLIFrameElement | undefined` when the
+   * element type is unknown (e.g. panes from `get`/`list`). Use
    * {@link IframePane.element} for the canonical, always-present element.
    */
-  readonly iframe: HTMLIFrameElement | undefined
+  readonly iframe: PaneIframe<E>
   /**
    * The element the pane is currently mounted to, if any.
    */
@@ -207,11 +221,11 @@ export interface IframePanes {
   /**
    * List all managed panes.
    */
-  list: () => IframePane[]
+  list: () => IframePane<HTMLElement>[]
   /**
    * Get a pane by id.
    */
-  get: (id: string) => IframePane | undefined
+  get: (id: string) => IframePane<HTMLElement> | undefined
   /**
    * Whether a pane with the given id exists.
    */
@@ -219,8 +233,20 @@ export interface IframePanes {
   /**
    * Get the pane with the given id, creating it if missing.
    * Options only apply on creation.
+   *
+   * The returned pane's element type is inferred from the options, so
+   * {@link IframePane.iframe} is non-nullable for a default/`tagName: 'iframe'`
+   * pane, `undefined` for a known non-iframe pane, and follows the type of a
+   * provided `element`.
    */
-  ensure: (id: string, options?: IframePaneOptions) => IframePane
+  ensure: {
+    /** Adopt an existing element — the pane's element type follows it. */
+    <E extends HTMLElement>(id: string, options: Omit<IframePaneOptions<E>, 'element'> & { element: E }): IframePane<E>
+    /** Create a known tag — the pane's element type follows the tag name. */
+    <K extends keyof HTMLElementTagNameMap>(id: string, options: Omit<IframePaneOptions<HTMLElementTagNameMap[K]>, 'tagName'> & { tagName: K }): IframePane<HTMLElementTagNameMap[K]>
+    /** Default (or any other options): an iframe pane. */
+    (id: string, options?: IframePaneOptions<HTMLIFrameElement>): IframePane<HTMLIFrameElement>
+  }
   /**
    * LRU-like auto-dispose limit, see {@link IframePanesOptions.maxPanes}.
    * Lowering it evicts immediately.

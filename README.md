@@ -126,6 +126,21 @@ panes.ensure('custom', { element: node })
 
 `pane.element` is the canonical accessor for any pane. `pane.iframe` remains as a back-compat alias — it returns the managed element when it's an `<iframe>`, and `undefined` for non-iframe panes. `src` is only applied to iframe panes and is ignored otherwise.
 
+`ensure` infers the pane's element type from the options, so the accessors are precisely typed at the call site:
+
+```ts
+panes.ensure('a').element // HTMLIFrameElement
+panes.ensure('a').iframe // HTMLIFrameElement (non-nullable)
+
+panes.ensure('b', { tagName: 'div' }).element // HTMLDivElement
+panes.ensure('b', { tagName: 'div' }).iframe // undefined
+
+panes.ensure('c', { element: myCanvas }).element // HTMLCanvasElement
+
+// looked-up panes have an unknown element type, so `iframe` is nullable
+panes.get('a')?.iframe // HTMLIFrameElement | undefined
+```
+
 ## API
 
 ### `createIframePanes(options?)`
