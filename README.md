@@ -124,7 +124,7 @@ const node = document.createElement('div')
 panes.ensure('custom', { element: node })
 ```
 
-`pane.element` is the canonical accessor for any pane; `pane.iframe` remains as a back-compat alias (the same element, typed as `HTMLIFrameElement`). `src` is only applied to iframe panes and is ignored otherwise.
+`pane.element` is the canonical accessor for any pane. `pane.iframe` remains as a back-compat alias — it returns the managed element when it's an `<iframe>`, and `undefined` for non-iframe panes. `src` is only applied to iframe panes and is ignored otherwise.
 
 ## API
 
@@ -158,7 +158,7 @@ Returns an `IframePanes` manager:
 - `update()` — manually re-sync the box
 - `dispose()` — remove the element and unregister it
 - `element` — the managed element (an `<iframe>` by default)
-- `iframe` — back-compat alias for `element`, typed as `HTMLIFrameElement`
+- `iframe` — back-compat alias: the managed element when it's an `<iframe>`, else `undefined`
 - `target`, `isMounted`, `isVisible`, `isDisposed`, `lastActiveAt`
 
 ## Framework integrations

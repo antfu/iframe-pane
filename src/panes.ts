@@ -236,9 +236,12 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
       getContainer().appendChild(el)
     }
 
-    /** Back-compat alias for {@link Pane.element}, typed as an iframe. */
-    get iframe(): HTMLIFrameElement {
-      return this.element as HTMLIFrameElement
+    /**
+     * Back-compat alias for {@link Pane.element} when it is an iframe;
+     * `undefined` for non-iframe panes.
+     */
+    get iframe(): HTMLIFrameElement | undefined {
+      return isIframe(this.element) ? this.element : undefined
     }
 
     get isMounted(): boolean {

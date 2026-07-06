@@ -138,13 +138,14 @@ export interface IframePane {
    */
   readonly element: HTMLElement
   /**
-   * The managed element, typed as an iframe.
+   * The managed element when it is an iframe; `undefined` otherwise.
    *
    * Back-compat alias for {@link IframePane.element} — panes are iframe-first,
-   * so this returns the same element cast to `HTMLIFrameElement`. Prefer
-   * {@link IframePane.element} for non-iframe panes.
+   * so for the default (iframe) pane this is the same element. It is
+   * `undefined` for non-iframe panes (e.g. a `tagName: 'div'` pane); use
+   * {@link IframePane.element} for the canonical, always-present element.
    */
-  readonly iframe: HTMLIFrameElement
+  readonly iframe: HTMLIFrameElement | undefined
   /**
    * The element the pane is currently mounted to, if any.
    */

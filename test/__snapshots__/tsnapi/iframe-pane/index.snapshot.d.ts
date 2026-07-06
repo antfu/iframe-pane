@@ -5,7 +5,7 @@
 export interface IframePane {
   readonly id: string;
   readonly element: HTMLElement;
-  readonly iframe: HTMLIFrameElement;
+  readonly iframe: HTMLIFrameElement | undefined;
   readonly target: Element | null;
   readonly isMounted: boolean;
   readonly isVisible: boolean;

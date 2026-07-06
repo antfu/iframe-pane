@@ -85,16 +85,16 @@ describe('createIframePanes', () => {
     expect(container.style.position).toBe('fixed')
     expect(container.style.pointerEvents).toBe('none')
 
-    expect(pane.iframe.parentElement).toBe(container)
+    expect(pane.element.parentElement).toBe(container)
     // `iframe` and `element` are the same node; default tag is <iframe>
     expect(pane.element).toBe(pane.iframe)
     expect(pane.element.tagName).toBe('IFRAME')
-    expect(pane.iframe.getAttribute('data-iframe-pane')).toBe('a')
-    expect(pane.iframe.src).toBe('https://example.com/')
+    expect(pane.element.getAttribute('data-iframe-pane')).toBe('a')
+    expect(pane.iframe!.src).toBe('https://example.com/')
     // hidden by default
     expect(pane.isVisible).toBe(false)
-    expect(pane.iframe.style.opacity).toBe('0.001')
-    expect(pane.iframe.style.pointerEvents).toBe('none')
+    expect(pane.element.style.opacity).toBe('0.001')
+    expect(pane.element.style.pointerEvents).toBe('none')
   })
 
   it('returns the same pane for the same id, preserving src', () => {
@@ -102,7 +102,7 @@ describe('createIframePanes', () => {
     const a1 = panes.ensure('a', { src: 'https://example.com/one' })
     const a2 = panes.ensure('a', { src: 'https://example.com/two' })
     expect(a2).toBe(a1)
-    expect(a1.iframe.src).toBe('https://example.com/one')
+    expect(a1.iframe!.src).toBe('https://example.com/one')
     expect(panes.list()).toEqual([a1])
   })
 
@@ -114,10 +114,10 @@ describe('createIframePanes', () => {
       style: { colorScheme: 'dark' },
       onCreated,
     })
-    expect(pane.iframe.getAttribute('allow')).toBe('clipboard-read; clipboard-write')
-    expect(pane.iframe.getAttribute('title')).toBe('Test')
-    expect(pane.iframe.style.colorScheme).toBe('dark')
-    expect(onCreated).toHaveBeenCalledWith(pane.iframe)
+    expect(pane.element.getAttribute('allow')).toBe('clipboard-read; clipboard-write')
+    expect(pane.element.getAttribute('title')).toBe('Test')
+    expect(pane.element.style.colorScheme).toBe('dark')
+    expect(onCreated).toHaveBeenCalledWith(pane.element)
   })
 
   it('lists, gets, and has panes', () => {
@@ -142,12 +142,12 @@ describe('mount / unmount', () => {
     expect(pane.isMounted).toBe(true)
     expect(pane.isVisible).toBe(true)
     expect(pane.target).toBe(target)
-    expect(pane.iframe.style.opacity).toBe('1')
-    expect(pane.iframe.style.pointerEvents).toBe('auto')
-    expect(pane.iframe.style.left).toBe('10px')
-    expect(pane.iframe.style.top).toBe('20px')
-    expect(pane.iframe.style.width).toBe('300px')
-    expect(pane.iframe.style.height).toBe('200px')
+    expect(pane.element.style.opacity).toBe('1')
+    expect(pane.element.style.pointerEvents).toBe('auto')
+    expect(pane.element.style.left).toBe('10px')
+    expect(pane.element.style.top).toBe('20px')
+    expect(pane.element.style.width).toBe('300px')
+    expect(pane.element.style.height).toBe('200px')
   })
 
   it('offsets the box relative to a custom container', () => {
@@ -159,11 +159,11 @@ describe('mount / unmount', () => {
     const pane = panes.ensure('a')
     // static custom containers are made positioned
     expect(container.style.position).toBe('relative')
-    expect(pane.iframe.parentElement).toBe(container)
+    expect(pane.element.parentElement).toBe(container)
 
     pane.mount(createTarget({ left: 10, top: 20, width: 300, height: 200 }))
-    expect(pane.iframe.style.left).toBe('5px')
-    expect(pane.iframe.style.top).toBe('5px')
+    expect(pane.element.style.left).toBe('5px')
+    expect(pane.element.style.top).toBe('5px')
   })
 
   it('unmounts: hides but keeps the iframe alive', () => {
@@ -176,9 +176,9 @@ describe('mount / unmount', () => {
     expect(pane.isMounted).toBe(false)
     expect(pane.isVisible).toBe(false)
     expect(pane.target).toBeNull()
-    expect(pane.iframe.style.opacity).toBe('0.001')
-    expect(pane.iframe.style.pointerEvents).toBe('none')
-    expect(pane.iframe.parentElement).toBe(panes.container)
+    expect(pane.element.style.opacity).toBe('0.001')
+    expect(pane.element.style.pointerEvents).toBe('none')
+    expect(pane.element.parentElement).toBe(panes.container)
     expect(pane.isDisposed).toBe(false)
   })
 
@@ -191,8 +191,8 @@ describe('mount / unmount', () => {
     pane.mount(t1)
     pane.mount(t2)
     expect(pane.target).toBe(t2)
-    expect(pane.iframe.style.left).toBe('50px')
-    expect(pane.iframe.style.width).toBe('400px')
+    expect(pane.element.style.left).toBe('50px')
+    expect(pane.element.style.width).toBe('400px')
 
     const ro = ResizeObserverStub.instances[0]
     expect(ro.observed).toEqual([t2])
@@ -210,8 +210,8 @@ describe('mount / unmount', () => {
 
     mockRect(target, { left: 0, top: 0, width: 640, height: 480 })
     ro.trigger([target])
-    expect(pane.iframe.style.width).toBe('640px')
-    expect(pane.iframe.style.height).toBe('480px')
+    expect(pane.element.style.width).toBe('640px')
+    expect(pane.element.style.height).toBe('480px')
 
     pane.unmount()
     expect(ro.observed).toEqual([])
@@ -226,10 +226,10 @@ describe('mount / unmount', () => {
     pane.hide()
     mockRect(target, { left: 0, top: 0, width: 999, height: 999 })
     ResizeObserverStub.instances[0].trigger([target])
-    expect(pane.iframe.style.width).toBe('100px')
+    expect(pane.element.style.width).toBe('100px')
 
     pane.show()
-    expect(pane.iframe.style.width).toBe('999px')
+    expect(pane.element.style.width).toBe('999px')
   })
 
   it('supports multiple panes stacked on the same target', () => {
@@ -258,8 +258,8 @@ describe('style customization', () => {
     const pane = panes.ensure('a', {
       style: { colorScheme: 'dark' },
     })
-    expect(pane.iframe.style.borderRadius).toBe('8px')
-    expect(pane.iframe.style.colorScheme).toBe('dark')
+    expect(pane.element.style.borderRadius).toBe('8px')
+    expect(pane.element.style.colorScheme).toBe('dark')
   })
 
   it('applies styleHidden and styleActive on state transitions', () => {
@@ -269,18 +269,18 @@ describe('style customization', () => {
     })
     const pane = panes.ensure('a')
     // hidden initially
-    expect(pane.iframe.style.opacity).toBe('0.001')
-    expect(pane.iframe.style.visibility).toBe('hidden')
-    expect(pane.iframe.style.boxShadow).toBe('')
+    expect(pane.element.style.opacity).toBe('0.001')
+    expect(pane.element.style.visibility).toBe('hidden')
+    expect(pane.element.style.boxShadow).toBe('')
 
     pane.mount(createTarget())
-    expect(pane.iframe.style.opacity).toBe('1')
-    expect(pane.iframe.style.visibility).toBe('')
-    expect(pane.iframe.style.boxShadow).toBe('0 0 8px black')
+    expect(pane.element.style.opacity).toBe('1')
+    expect(pane.element.style.visibility).toBe('')
+    expect(pane.element.style.boxShadow).toBe('0 0 8px black')
 
     pane.hide()
-    expect(pane.iframe.style.visibility).toBe('hidden')
-    expect(pane.iframe.style.boxShadow).toBe('')
+    expect(pane.element.style.visibility).toBe('hidden')
+    expect(pane.element.style.boxShadow).toBe('')
   })
 
   it('resets state keys back to default style values', () => {
@@ -289,13 +289,13 @@ describe('style customization', () => {
       style: { transform: 'scale(1)' },
       styleHidden: { transform: 'scale(0.98)' },
     })
-    expect(pane.iframe.style.transform).toBe('scale(0.98)')
+    expect(pane.element.style.transform).toBe('scale(0.98)')
 
     pane.mount(createTarget())
-    expect(pane.iframe.style.transform).toBe('scale(1)')
+    expect(pane.element.style.transform).toBe('scale(1)')
 
     pane.hide()
-    expect(pane.iframe.style.transform).toBe('scale(0.98)')
+    expect(pane.element.style.transform).toBe('scale(0.98)')
   })
 
   it('overrides built-in hidden styles via styleHidden', () => {
@@ -305,7 +305,7 @@ describe('style customization', () => {
     const pane = panes.ensure('a', {
       styleHidden: { opacity: '0.25' },
     })
-    expect(pane.iframe.style.opacity).toBe('0.25')
+    expect(pane.element.style.opacity).toBe('0.25')
   })
 
   it('respects a custom styleActive pointerEvents, except while locked', () => {
@@ -314,12 +314,12 @@ describe('style customization', () => {
       styleActive: { pointerEvents: 'painted' },
     })
     pane.mount(createTarget())
-    expect(pane.iframe.style.pointerEvents).toBe('painted')
+    expect(pane.element.style.pointerEvents).toBe('painted')
 
     const release = panes.lockPointerEvents()
-    expect(pane.iframe.style.pointerEvents).toBe('none')
+    expect(pane.element.style.pointerEvents).toBe('none')
     release()
-    expect(pane.iframe.style.pointerEvents).toBe('painted')
+    expect(pane.element.style.pointerEvents).toBe('painted')
   })
 })
 
@@ -333,13 +333,13 @@ describe('pointer events lock', () => {
     expect(panes.isPointerLocked).toBe(false)
     const release = panes.lockPointerEvents()
     expect(panes.isPointerLocked).toBe(true)
-    expect(shown.iframe.style.pointerEvents).toBe('none')
-    expect(hidden.iframe.style.pointerEvents).toBe('none')
+    expect(shown.element.style.pointerEvents).toBe('none')
+    expect(hidden.element.style.pointerEvents).toBe('none')
 
     release()
     expect(panes.isPointerLocked).toBe(false)
-    expect(shown.iframe.style.pointerEvents).toBe('auto')
-    expect(hidden.iframe.style.pointerEvents).toBe('none')
+    expect(shown.element.style.pointerEvents).toBe('auto')
+    expect(hidden.element.style.pointerEvents).toBe('none')
   })
 
   it('counts overlapping locks and ignores double release', () => {
@@ -352,11 +352,11 @@ describe('pointer events lock', () => {
     release1()
     release1() // double release is a no-op
     expect(panes.isPointerLocked).toBe(true)
-    expect(pane.iframe.style.pointerEvents).toBe('none')
+    expect(pane.element.style.pointerEvents).toBe('none')
 
     release2()
     expect(panes.isPointerLocked).toBe(false)
-    expect(pane.iframe.style.pointerEvents).toBe('auto')
+    expect(pane.element.style.pointerEvents).toBe('auto')
   })
 
   it('applies the lock to panes shown while locked', () => {
@@ -365,10 +365,10 @@ describe('pointer events lock', () => {
     const release = panes.lockPointerEvents()
 
     pane.mount(createTarget())
-    expect(pane.iframe.style.pointerEvents).toBe('none')
+    expect(pane.element.style.pointerEvents).toBe('none')
 
     release()
-    expect(pane.iframe.style.pointerEvents).toBe('auto')
+    expect(pane.element.style.pointerEvents).toBe('auto')
   })
 })
 
@@ -393,7 +393,7 @@ describe('lru auto-dispose', () => {
     const c = panes.ensure('c')
     expect(disposedIds).toEqual(['b'])
     expect(b.isDisposed).toBe(true)
-    expect(b.iframe.parentElement).toBeNull()
+    expect(b.element.parentElement).toBeNull()
     expect(panes.list()).toEqual([a, c])
   })
 
@@ -452,7 +452,7 @@ describe('dispose', () => {
     pane.dispose() // idempotent
     expect(disposed).toEqual([pane])
     expect(pane.isDisposed).toBe(true)
-    expect(pane.iframe.parentElement).toBeNull()
+    expect(pane.element.parentElement).toBeNull()
     expect(panes.has('a')).toBe(false)
     expect(ResizeObserverStub.instances[0].observed).toEqual([])
   })
@@ -509,8 +509,8 @@ describe('viewport listeners', () => {
     mockRect(target, { left: 30, top: 40, width: 100, height: 100 })
     window.dispatchEvent(new Event('resize'))
     await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
-    expect(pane.iframe.style.left).toBe('30px')
-    expect(pane.iframe.style.top).toBe('40px')
+    expect(pane.element.style.left).toBe('30px')
+    expect(pane.element.style.top).toBe('40px')
   })
 
   it('updates mounted panes on scroll', async () => {
@@ -522,7 +522,7 @@ describe('viewport listeners', () => {
     mockRect(target, { left: 0, top: -25, width: 100, height: 100 })
     window.dispatchEvent(new Event('scroll'))
     await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)))
-    expect(pane.iframe.style.top).toBe('-25px')
+    expect(pane.element.style.top).toBe('-25px')
   })
 
   it('stops listening once nothing is mounted', () => {
@@ -549,10 +549,10 @@ describe('viewport listeners', () => {
     mockRect(ta, { left: 1, top: 2, width: 3, height: 4 })
     mockRect(tb, { left: 5, top: 6, width: 7, height: 8 })
     panes.updateAll()
-    expect(a.iframe.style.left).toBe('1px')
-    expect(a.iframe.style.height).toBe('4px')
-    expect(b.iframe.style.left).toBe('5px')
-    expect(b.iframe.style.height).toBe('8px')
+    expect(a.element.style.left).toBe('1px')
+    expect(a.element.style.height).toBe('4px')
+    expect(b.element.style.left).toBe('5px')
+    expect(b.element.style.height).toBe('8px')
   })
 })
 
@@ -567,8 +567,8 @@ describe('non-iframe elements', () => {
     })
 
     expect(pane.element.tagName).toBe('DIV')
-    // `iframe` back-compat alias points at the same node (cast)
-    expect(pane.iframe).toBe(pane.element)
+    // `iframe` alias is undefined for non-iframe panes
+    expect(pane.iframe).toBeUndefined()
     expect(pane.element.parentElement).toBe(panes.container)
     expect(pane.element.getAttribute('data-iframe-pane')).toBe('a')
     expect(pane.element.getAttribute('role')).toBe('region')
@@ -660,6 +660,6 @@ describe('non-iframe elements', () => {
   it('still applies `src` for iframe panes', () => {
     const panes = createIframePanes()
     const pane = panes.ensure('a', { tagName: 'iframe', src: 'https://example.com/' })
-    expect(pane.iframe.src).toBe('https://example.com/')
+    expect(pane.iframe!.src).toBe('https://example.com/')
   })
 })
