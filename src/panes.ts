@@ -1,6 +1,20 @@
 import type { IframePane, IframePaneOptions, IframePanes, IframePanesOptions, IframePaneStyle } from './types'
 
 /**
+ * Whether an element is an iframe, checked against its own document's view so
+ * it works across realms (and under happy-dom in tests). Falls back to a
+ * duck-typed `'src' in el` when no view/constructor is available.
+ */
+function isIframe(el: HTMLElement): el is HTMLIFrameElement {
+  const view = el.ownerDocument?.defaultView
+  if (view?.HTMLIFrameElement)
+    return el instanceof view.HTMLIFrameElement
+  if (typeof HTMLIFrameElement !== 'undefined')
+    return el instanceof HTMLIFrameElement
+  return 'src' in el
+}
+
+/**
  * Create a manager for a set of persistent, headless iframes.
  *
  * Iframes are parked in a dedicated container outside of your app's render
@@ -10,6 +24,10 @@ import type { IframePane, IframePaneOptions, IframePanes, IframePanesOptions, If
  *
  * Safe to call in module scope during SSR: the DOM is only touched once a
  * pane is created.
+ *
+ * Panes are iframe-first, but the machinery is element-agnostic: pass a
+ * custom `tagName` (e.g. `'div'`) or an existing `element` to manage any
+ * out-of-tree element the same way.
  */
 export function createIframePanes(options: IframePanesOptions = {}): IframePanes {
   const panes = new Map<string, Pane>()
@@ -137,7 +155,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
   }
 
   function applyPointerEvents(pane: Pane): void {
-    pane.iframe.style.pointerEvents = pointerLocks > 0
+    pane.element.style.pointerEvents = pointerLocks > 0
       ? 'none'
       : pane.stateStyle.pointerEvents
   }
@@ -159,9 +177,9 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
     }
   }
 
-  class Pane implements IframePane {
+  class Pane implements IframePane<HTMLElement> {
     readonly id: string
-    readonly iframe: HTMLIFrameElement
+    readonly element: HTMLElement
     readonly styleDefault: IframePaneStyle
     readonly styleActive: IframePaneStyle & { pointerEvents: string }
     readonly styleHidden: IframePaneStyle & { pointerEvents: string }
@@ -172,7 +190,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
     isDisposed = false
     lastActiveAt = 0
 
-    constructor(id: string, paneOptions: IframePaneOptions) {
+    constructor(id: string, paneOptions: IframePaneOptions<HTMLElement>) {
       this.id = id
       this.styleDefault = {
         ...options.styleDefault,
@@ -196,9 +214,9 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
       ])]
 
       const doc = getDocument()
-      const iframe = this.iframe = doc.createElement('iframe')
-      iframe.setAttribute('data-iframe-pane', id)
-      Object.assign(iframe.style, {
+      const el = this.element = paneOptions.element ?? doc.createElement(paneOptions.tagName ?? 'iframe')
+      el.setAttribute('data-iframe-pane', id)
+      Object.assign(el.style, {
         display: 'block',
         position: 'absolute',
         left: '0px',
@@ -207,13 +225,23 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
       } satisfies Partial<CSSStyleDeclaration>, this.styleDefault)
       if (paneOptions.attrs) {
         for (const [key, value] of Object.entries(paneOptions.attrs))
-          iframe.setAttribute(key, value)
+          el.setAttribute(key, value)
       }
       this.applyState()
-      paneOptions.onCreated?.(iframe)
-      if (paneOptions.src)
-        iframe.src = paneOptions.src
-      getContainer().appendChild(iframe)
+      paneOptions.onCreated?.(el)
+      // `src` is iframe-specific — only assign it when the element actually
+      // supports it (robust under the pane's document, incl. happy-dom).
+      if (paneOptions.src != null && isIframe(el))
+        el.src = paneOptions.src
+      getContainer().appendChild(el)
+    }
+
+    /**
+     * Back-compat alias for {@link Pane.element} when it is an iframe;
+     * `undefined` for non-iframe panes.
+     */
+    get iframe(): HTMLIFrameElement | undefined {
+      return isIframe(this.element) ? this.element : undefined
     }
 
     get isMounted(): boolean {
@@ -237,9 +265,9 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
         if (!(key in state))
           styles[key] = this.styleDefault[key] ?? ''
       }
-      Object.assign(this.iframe.style, styles, state)
+      Object.assign(this.element.style, styles, state)
       if (pointerLocks > 0)
-        this.iframe.style.pointerEvents = 'none'
+        this.element.style.pointerEvents = 'none'
     }
 
     touch(): void {
@@ -285,7 +313,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
         return
       const targetRect = this.target.getBoundingClientRect()
       const containerRect = getContainer().getBoundingClientRect()
-      Object.assign(this.iframe.style, {
+      Object.assign(this.element.style, {
         left: `${targetRect.left - containerRect.left}px`,
         top: `${targetRect.top - containerRect.top}px`,
         width: `${targetRect.width}px`,
@@ -298,7 +326,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
         return
       this.unmount()
       this.isDisposed = true
-      this.iframe.remove()
+      this.element.remove()
       panes.delete(this.id)
       options.onPaneDisposed?.(this)
     }
@@ -319,7 +347,9 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
     has(id) {
       return panes.has(id)
     },
-    ensure(id, paneOptions = {}) {
+    // Overloaded in the `IframePanes` type to infer the element type from
+    // `tagName`/`element`; the runtime is element-agnostic, so cast the impl.
+    ensure: ((id: string, paneOptions: IframePaneOptions<HTMLElement> = {}) => {
       if (isDisposed)
         throw new Error('[iframe-pane] Manager has been disposed')
       let pane = panes.get(id)
@@ -334,7 +364,7 @@ export function createIframePanes(options: IframePanesOptions = {}): IframePanes
         pane.touch()
       }
       return pane
-    },
+    }) as unknown as IframePanes['ensure'],
     get maxPanes() {
       return maxPanes
     },
